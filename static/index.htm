@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notes Manager</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+
+        #notes-container {
+            margin: 20px 0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 10px;
+            min-height: 100px;
+        }
+
+        .note {
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            padding: 10px;
+            margin: 5px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: move;
+        }
+
+            .note:hover {
+                background-color: #f0f0f0;
+            }
+
+        .note-actions {
+            display: flex;
+            gap: 5px;
+        }
+
+        button {
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+
+        .delete-btn {
+            background-color: #ff6b6b;
+            color: white;
+            border: none;
+            border-radius: 3px;
+        }
+
+            .delete-btn:hover {
+                background-color: #ff5252;
+            }
+
+        #add-note-form {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        #new-note-input {
+            flex-grow: 1;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+        }
+
+        #add-note-btn {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            padding: 8px 15px;
+        }
+
+            #add-note-btn:hover {
+                background-color: #45a049;
+            }
+
+        .placeholder {
+            background-color: #e0e0e0;
+            border: 1px dashed #999;
+        }
+    </style>
+</head>
+<body>
+    <h1>Notes Manager</h1>
+
+    <form id="add-note-form">
+        <input type="text" id="new-note-input" placeholder="Enter note text..." required>
+        <button type="submit" id="add-note-btn">Add Note</button>
+    </form>
+
+    <div id="notes-container">
+        <!-- Notes will appear here -->
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const notesContainer = document.getElementById('notes-container');
+            const addNoteForm = document.getElementById('add-note-form');
+            const newNoteInput = document.getElementById('new-note-input');
+
+            // Add new note
+            addNoteForm.addEventListener('submit', function (e) {
+                e.preventDefault();
+                const noteText = newNoteInput.value.trim();
+                if (noteText) {
+                    addNote(noteText);
+                    newNoteInput.value = '';
+                }
+            });
+
+            // Function to add a note
+            function addNote(text) {
+                const noteId = Date.now();
+                const noteElement = document.createElement('div');
+                noteElement.className = 'note';
+                noteElement.dataset.id = noteId;
+                noteElement.draggable = true;
+
+                noteElement.innerHTML = `
+                        <span>${text}</span>
+                        <div class="note-actions">
+                            <button class="delete-btn">Delete</button>
+                        </div>
+                    `;
+
+                // Delete note handler
+                noteElement.querySelector('.delete-btn').addEventListener('click', function () {
+                    noteElement.remove();
+                });
+
+                // Drag and drop functionality
+                noteElement.addEventListener('dragstart', function (e) {
+                    e.dataTransfer.setData('text/plain', noteId);
+                    setTimeout(() => noteElement.classList.add('dragging'), 0);
+                });
+
+                noteElement.addEventListener('dragend', function () {
+                    noteElement.classList.remove('dragging');
+                });
+
+                notesContainer.appendChild(noteElement);
+                noteElement.scrollIntoView({ behavior: 'smooth' });
+            }
+
+            // Drag and drop for notes container
+            notesContainer.addEventListener('dragover', function (e) {
+                e.preventDefault();
+                const draggingElement = document.querySelector('.dragging');
+                const afterElement = getDragAfterElement(notesContainer, e.clientY);
+
+                if (afterElement == null) {
+                    notesContainer.appendChild(draggingElement);
+                } else {
+                    notesContainer.insertBefore(draggingElement, afterElement);
+                }
+            });
+
+            notesContainer.addEventListener('dragenter', function (e) {
+                e.preventDefault();
+            });
+
+            // Helper function to determine drop position
+            function getDragAfterElement(container, y) {
+                const draggableElements = [...container.querySelectorAll('.note:not(.dragging)')];
+
+                return draggableElements.reduce((closest, child) => {
+                    const box = child.getBoundingClientRect();
+                    const offset = y - box.top - box.height / 2;
+
+                    if (offset < 0 && offset > closest.offset) {
+                        return { offset: offset, element: child };
+                    } else {
+                        return closest;
+                    }
+                }, { offset: Number.NEGATIVE_INFINITY }).element;
+            }
+        });
+    </script>
+</body>
+</html>
