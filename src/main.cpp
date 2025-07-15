@@ -3,8 +3,6 @@
 #include <string>
 #include <fstream>
 #include <codecvt>
-#include <io.h>
-#include <fcntl.h>
 
 using json = nlohmann::json;
 
@@ -46,20 +44,17 @@ std::wstring toWstring(std::string& str) {
 int main() {
 	std::cout << "Server starting... ";
 
-	//_setmode(_fileno(stdout), _O_U16TEXT);
-	//_setmode(_fileno(stdin), _O_U16TEXT);
-
 	httplib::Server svr;
 	httplib::Client cli("http://localhost:1234");
 
-	//std::string html;
-	//try {
-	//	html = readFileToString("static/index.htm");
-	//}
-	//catch (const std::exception& e) {
-	//	std::cerr << "Error: " << e.what() << std::endl;
-	//	return 1;
-	//}
+	std::string html;
+	try {
+		html = readFileToString("static/index.htm");
+	}
+	catch (const std::exception& e) {
+		std::cerr << "Error: " << e.what() << std::endl;
+		return 1;
+	}
 
 	svr.Get("/", [](const httplib::Request&, httplib::Response& res) {
 		std::string html = readFileToString("static/index.htm");
@@ -100,7 +95,7 @@ int main() {
 		res.set_content(response.dump(), "application/json");
 	});
 
-	std::cout << "[ OK ]\n";
+	std::cout << "[ OK ]" << std::endl;
 	svr.listen("0.0.0.0", 8080);
 	return 0;
 }
