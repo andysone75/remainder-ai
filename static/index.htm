@@ -3,26 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Notes Manager</title>
+    <title>Notes Manager with Assistant</title>
     <style>
         body {
             font-family: Arial, sans-serif;
-            max-width: 800px;
+            max-width: 1000px;
             margin: 0 auto;
             padding: 20px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
         }
 
         h1 {
+            grid-column: 1 / -1;
             color: #333;
             text-align: center;
         }
 
-        #notes-container {
-            margin: 20px 0;
+        .panel {
             border: 1px solid #ddd;
             border-radius: 5px;
-            padding: 10px;
-            min-height: 100px;
+            padding: 15px;
+        }
+
+        #notes-container {
+            min-height: 300px;
+            margin: 10px 0;
         }
 
         .note {
@@ -65,7 +72,7 @@
         #add-note-form {
             display: flex;
             gap: 10px;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
         }
 
         #new-note-input {
@@ -87,31 +94,111 @@
                 background-color: #45a049;
             }
 
-        .placeholder {
-            background-color: #e0e0e0;
-            border: 1px dashed #999;
+        /* Chat styles */
+        #chat-container {
+            display: flex;
+            flex-direction: column;
+            height: 500px;
+        }
+
+        #chat-messages {
+            flex-grow: 1;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 10px;
+            margin-bottom: 10px;
+            background-color: #fafafa;
+        }
+
+        .message {
+            margin-bottom: 10px;
+            padding: 8px 12px;
+            border-radius: 15px;
+            max-width: 80%;
+        }
+
+        .user-message {
+            background-color: #e3f2fd;
+            margin-left: auto;
+            border-bottom-right-radius: 5px;
+        }
+
+        .bot-message {
+            background-color: #f1f1f1;
+            margin-right: auto;
+            border-bottom-left-radius: 5px;
+        }
+
+        #chat-form {
+            display: flex;
+            gap: 10px;
+        }
+
+        #chat-input {
+            flex-grow: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            max-height: 100px;
+            resize: none;
+        }
+
+        #send-btn {
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            padding: 0 20px;
+            cursor: pointer;
+        }
+
+            #send-btn:hover {
+                background-color: #0b7dda;
+            }
+
+        .typing-indicator {
+            color: #888;
+            font-style: italic;
+            margin: 5px 0;
         }
     </style>
 </head>
 <body>
-    <h1>Notes Manager</h1>
+    <h1>Notes Manager with Assistant</h1>
 
-    <form id="add-note-form">
-        <input type="text" id="new-note-input" placeholder="Enter note text..." required>
-        <button type="submit" id="add-note-btn">Add Note</button>
-    </form>
+    <div class="panel">
+        <h2>Notes</h2>
+        <form id="add-note-form">
+            <input type="text" id="new-note-input" placeholder="Enter note text..." required>
+            <button type="submit" id="add-note-btn">Add Note</button>
+        </form>
 
-    <div id="notes-container">
-        <!-- Notes will appear here -->
+        <div id="notes-container">
+            <!-- Notes will appear here -->
+        </div>
+    </div>
+
+    <div class="panel">
+        <h2>Assistant</h2>
+        <div id="chat-container">
+            <div id="chat-messages">
+                <div class="message bot-message">Hello! I'm your notes assistant. How can I help you today?</div>
+            </div>
+            <form id="chat-form">
+                <textarea id="chat-input" placeholder="Type your message here..." maxlength="200" required></textarea>
+                <button type="submit" id="send-btn">Send</button>
+            </form>
+        </div>
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', function () {
+            // Notes functionality
             const notesContainer = document.getElementById('notes-container');
             const addNoteForm = document.getElementById('add-note-form');
             const newNoteInput = document.getElementById('new-note-input');
 
-            // Add new note
             addNoteForm.addEventListener('submit', function (e) {
                 e.preventDefault();
                 const noteText = newNoteInput.value.trim();
@@ -121,7 +208,6 @@
                 }
             });
 
-            // Function to add a note
             function addNote(text) {
                 const noteId = Date.now();
                 const noteElement = document.createElement('div');
@@ -136,12 +222,10 @@
                         </div>
                     `;
 
-                // Delete note handler
                 noteElement.querySelector('.delete-btn').addEventListener('click', function () {
                     noteElement.remove();
                 });
 
-                // Drag and drop functionality
                 noteElement.addEventListener('dragstart', function (e) {
                     e.dataTransfer.setData('text/plain', noteId);
                     setTimeout(() => noteElement.classList.add('dragging'), 0);
@@ -155,7 +239,6 @@
                 noteElement.scrollIntoView({ behavior: 'smooth' });
             }
 
-            // Drag and drop for notes container
             notesContainer.addEventListener('dragover', function (e) {
                 e.preventDefault();
                 const draggingElement = document.querySelector('.dragging');
@@ -172,7 +255,6 @@
                 e.preventDefault();
             });
 
-            // Helper function to determine drop position
             function getDragAfterElement(container, y) {
                 const draggableElements = [...container.querySelectorAll('.note:not(.dragging)')];
 
@@ -187,6 +269,108 @@
                     }
                 }, { offset: Number.NEGATIVE_INFINITY }).element;
             }
+
+            // Chat functionality
+            const chatForm = document.getElementById('chat-form');
+            const chatInput = document.getElementById('chat-input');
+            const chatMessages = document.getElementById('chat-messages');
+
+            let chatHistory = [];
+            const MAX_HISTORY_LENGTH = 10;
+
+            // Function to render entire chat history
+            function renderChatHistory() {
+                chatMessages.innerHTML = '';
+                chatHistory.forEach(msg => {
+                    if (msg.role === 'user') {
+                        addMessage(msg.content, 'user', false);
+                    } else if (msg.role === 'assistant') {
+                        addMessage(msg.content, 'bot', false);
+                    }
+                });
+            }
+
+            // Function to add a single message to UI (and optionally to history)
+            function addMessage(text, sender, addToHistory = true) {
+                const messageElement = document.createElement('div');
+                messageElement.className = `message ${sender}-message`;
+                messageElement.textContent = text;
+                chatMessages.appendChild(messageElement);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+
+            // Initial render
+            renderChatHistory();
+
+            chatForm.addEventListener('submit', function (e) {
+                e.preventDefault();
+                const message = chatInput.value.trim();
+                if (message) {
+                    // Remove oldest messages if history is full (keep one space for new user message)
+                    while (chatHistory.length >= MAX_HISTORY_LENGTH - 1) {
+                        chatHistory.shift(); // Remove oldest message
+                    }
+
+                    // Add user message to history
+                    const userMessage = { role: 'user', content: message };
+                    chatHistory.push(userMessage);
+                    addMessage(message, 'user', false);
+
+                    // Clear input field
+                    chatInput.value = '';
+
+                    // Send to server
+                    fetch("api/msg", {
+                        method: "POST",
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ history: chatHistory })
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data['type'] === 'error') {
+                                // Remove failed user message from history
+                                chatHistory.pop();
+                                addMessage("Server error: " + data['content'], 'bot', false);
+                            } else {
+                                const an = data['content'];
+                                const ans = JSON.parse(an);
+                                if (ans['type'] === 'create') {
+                                    // Create a new reminder/note
+                                    const taskText = ans['task'];
+                                    addNote(taskText); // Add as a new note
+                                }
+
+                                const botMessage = {
+                                    role: 'assistant',
+                                    content: ans['message']
+                                };
+
+                                // Remove oldest messages if adding bot response would exceed limit
+                                while (chatHistory.length >= MAX_HISTORY_LENGTH - 1) {
+                                    chatHistory.shift();
+                                }
+
+                                chatHistory.push(botMessage);
+                                addMessage(botMessage.content, 'bot', false);
+                            }
+                        })
+                        .catch(error => {
+                            // Remove failed user message from history
+                            chatHistory.pop();
+                            addMessage("Network error: Failed to get response from server", 'bot', false);
+                        });
+                }
+            });
+
+            // Prevent new lines in chat input (but allow Shift+Enter for new lines)
+            chatInput.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    chatForm.dispatchEvent(new Event('submit'));
+                }
+            });
         });
     </script>
 </body>
