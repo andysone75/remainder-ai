@@ -329,7 +329,6 @@
                     })
                         .then(response => response.json())
                         .then(data => {
-                            console.log(data);
                             if (data['type'] === 'error') {
                                 // Remove failed user message from history
                                 chatHistory.pop();

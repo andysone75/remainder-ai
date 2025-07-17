@@ -45,8 +45,8 @@ int main() {
 	std::cout << "Server starting... ";
 
 	httplib::Server svr;
-	//httplib::Client cli("http://llama-cpp-server:1234");
-	httplib::Client cli("http://localhost:1234");
+	httplib::Client cli("http://llama-cpp-server:1234");
+	// httplib::Client cli("http://localhost:1234");
 
 	//std::string html;
 	//try {
@@ -65,7 +65,7 @@ int main() {
 	svr.Post("/api/msg", [&cli](const httplib::Request& req, httplib::Response& res) {
 		auto history = json::parse(req.body)["history"];
 		std::string systemPrompt = readFileToString("systemPrompt.txt");
-		systemPrompt += getDateTime();
+		//systemPrompt += getDateTime();
 
 		json systemMsg = {
 			{"role", "system"},
@@ -90,12 +90,10 @@ int main() {
 
 		history.insert(history.begin(), systemMsg);
 
-		std::cout << history.dump(2) << std::endl << std::endl;
-
 		json request = {
 			{"model", "local-model"},
 			{"messages", history},
-			{"temperature", 0.3}
+			{"temperature", 0.15}
 		};
 
 		auto gpt = cli.Post("/v1/chat/completions", request.dump(), "application/json");
