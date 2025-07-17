@@ -1,0 +1,33 @@
+services:
+  cpp-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cpp-server
+    ports:
+      - "8080:8080"
+    restart: unless-stopped 
+    networks:
+      - cpp-network
+
+  llama-cpp:
+    image: ghcr.io/ggerganov/llama.cpp:full
+    container_name: llama-cpp-server
+    restart: unless-stopped
+    ports:
+      - "1234:1234"
+    volumes:
+      - ./models:/models
+    command: [
+      "--server",
+      "--model", "/models/model-q4_K.gguf",
+      "--ctx-size", "2048",
+      "--host", "0.0.0.0",
+      "--port", "1234"
+    ]
+    networks:
+      - cpp-network
+
+networks:
+  cpp-network:
+    driver: bridge

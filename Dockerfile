@@ -11,6 +11,7 @@ WORKDIR /app
 
 COPY --from=builder /app/server .
 COPY static/ ./static
+COPY systemPrompt.txt .
 
 EXPOSE 8080
 CMD ["./server"]

@@ -283,15 +283,15 @@
                 chatMessages.innerHTML = '';
                 chatHistory.forEach(msg => {
                     if (msg.role === 'user') {
-                        addMessage(msg.content, 'user', false);
+                        addMessage(msg.content, 'user');
                     } else if (msg.role === 'assistant') {
-                        addMessage(msg.content, 'bot', false);
+                        addMessage(msg.content, 'bot');
                     }
                 });
             }
 
             // Function to add a single message to UI (and optionally to history)
-            function addMessage(text, sender, addToHistory = true) {
+            function addMessage(text, sender) {
                 const messageElement = document.createElement('div');
                 messageElement.className = `message ${sender}-message`;
                 messageElement.textContent = text;
@@ -314,7 +314,7 @@
                     // Add user message to history
                     const userMessage = { role: 'user', content: message };
                     chatHistory.push(userMessage);
-                    addMessage(message, 'user', false);
+                    addMessage(message, 'user');
 
                     // Clear input field
                     chatInput.value = '';
@@ -329,10 +329,11 @@
                     })
                         .then(response => response.json())
                         .then(data => {
+                            console.log(data);
                             if (data['type'] === 'error') {
                                 // Remove failed user message from history
                                 chatHistory.pop();
-                                addMessage("Server error: " + data['content'], 'bot', false);
+                                addMessage("Server error: " + data['content'], 'bot');
                             } else {
                                 const an = data['content'];
                                 const ans = JSON.parse(an);
@@ -344,7 +345,8 @@
 
                                 const botMessage = {
                                     role: 'assistant',
-                                    content: ans['message']
+                                    content: ans['message'],
+                                    type: ans['type']
                                 };
 
                                 // Remove oldest messages if adding bot response would exceed limit
@@ -353,13 +355,13 @@
                                 }
 
                                 chatHistory.push(botMessage);
-                                addMessage(botMessage.content, 'bot', false);
+                                addMessage(botMessage.content, 'bot');
                             }
                         })
                         .catch(error => {
                             // Remove failed user message from history
                             chatHistory.pop();
-                            addMessage("Network error: Failed to get response from server", 'bot', false);
+                            addMessage("Network error: Failed to get response from server", 'bot');
                         });
                 }
             });

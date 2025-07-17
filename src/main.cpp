@@ -36,7 +36,7 @@ std::string getDateTime() {
 	return oss.str();
 }
 
-std::wstring toWstring(std::string& str) {
+std::wstring toWstring(const std::string& str) {
 	std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
 	return converter.from_bytes(str);
 }
@@ -45,16 +45,17 @@ int main() {
 	std::cout << "Server starting... ";
 
 	httplib::Server svr;
+	//httplib::Client cli("http://llama-cpp-server:1234");
 	httplib::Client cli("http://localhost:1234");
 
-	std::string html;
-	try {
-		html = readFileToString("static/index.htm");
-	}
-	catch (const std::exception& e) {
-		std::cerr << "Error: " << e.what() << std::endl;
-		return 1;
-	}
+	//std::string html;
+	//try {
+	//	html = readFileToString("static/index.htm");
+	//}
+	//catch (const std::exception& e) {
+	//	std::cerr << "Error: " << e.what() << std::endl;
+	//	return 1;
+	//}
 
 	svr.Get("/", [](const httplib::Request&, httplib::Response& res) {
 		std::string html = readFileToString("static/index.htm");
@@ -71,12 +72,30 @@ int main() {
 			{"content", systemPrompt}
 		};
 
+		auto cur = history.begin();
+		auto lastCreate = history.end();
+		
+		while (cur != history.end()) {
+			if ((*cur)["role"] == "assistant" && (*cur)["type"] == "create") {
+				lastCreate = cur;
+			}
+			cur++;
+		}
+		
+		// Remove old messages for previous requests
+		if (lastCreate != history.end()) {
+			lastCreate++;
+			history.erase(history.begin(), lastCreate);
+		}
+
 		history.insert(history.begin(), systemMsg);
+
+		std::cout << history.dump(2) << std::endl << std::endl;
 
 		json request = {
 			{"model", "local-model"},
 			{"messages", history},
-			{"temperature", 0.7}
+			{"temperature", 0.3}
 		};
 
 		auto gpt = cli.Post("/v1/chat/completions", request.dump(), "application/json");
