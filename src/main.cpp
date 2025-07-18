@@ -1,118 +1,36 @@
 #include <httplib.h>
 #include <nlohmann/json.hpp>
 #include <string>
-#include <fstream>
-#include <codecvt>
+#include "Utils.h"
+#include <LlmClient.h>
+#include <ChatService.h>
 
 using json = nlohmann::json;
 
-std::string readFileToString(const std::string& filepath) {
-	std::ifstream file(filepath);
-	if (!file.is_open()) {
-		throw std::runtime_error("Could not open file: " + filepath);
-	}
+//LlmClient llm("http://llama-cpp-server:1234");
+LlmClient llm("http://localhost:1234");
+ChatService chat(llm, "systemPrompt.txt");
 
-	file.seekg(0, std::ios::end);
-	std::streampos fileSize = file.tellg();
-	file.seekg(0, std::ios::beg);
-
-	std::string content;
-	content.reserve(fileSize);
-
-	content.assign(
-		std::istreambuf_iterator<char>(file),
-		std::istreambuf_iterator<char>());
-
-	return content;
+void mainPageCallback(const httplib::Request&, httplib::Response& res) {
+	std::string html = utils::readFileToString("static/index.htm");
+	res.set_content(html, "text/html");
 }
 
-std::string getDateTime() {
-	std::time_t now = std::time(nullptr);
-	std::tm* localTime = std::localtime(&now);
-	
-	std::ostringstream oss;
-	oss << std::put_time(localTime, "%Y-%m-%d %H:%M");
-	
-	return oss.str();
-}
-
-std::wstring toWstring(const std::string& str) {
-	std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
-	return converter.from_bytes(str);
+void assistantMsgCallback(const httplib::Request& req, httplib::Response& res) {
+	auto history = json::parse(req.body)["history"];
+	auto ans = chat.answer(history);
+	res.set_content(ans.dump(), "application/json");
 }
 
 int main() {
 	std::cout << "Server starting... ";
 
 	httplib::Server svr;
-	httplib::Client cli("http://llama-cpp-server:1234");
-	// httplib::Client cli("http://localhost:1234");
-
-	//std::string html;
-	//try {
-	//	html = readFileToString("static/index.htm");
-	//}
-	//catch (const std::exception& e) {
-	//	std::cerr << "Error: " << e.what() << std::endl;
-	//	return 1;
-	//}
-
-	svr.Get("/", [](const httplib::Request&, httplib::Response& res) {
-		std::string html = readFileToString("static/index.htm");
-		res.set_content(html, "text/html");
-	});
-
-	svr.Post("/api/msg", [&cli](const httplib::Request& req, httplib::Response& res) {
-		auto history = json::parse(req.body)["history"];
-		std::string systemPrompt = readFileToString("systemPrompt.txt");
-		//systemPrompt += getDateTime();
-
-		json systemMsg = {
-			{"role", "system"},
-			{"content", systemPrompt}
-		};
-
-		auto cur = history.begin();
-		auto lastCreate = history.end();
-		
-		while (cur != history.end()) {
-			if ((*cur)["role"] == "assistant" && (*cur)["type"] == "create") {
-				lastCreate = cur;
-			}
-			cur++;
-		}
-		
-		// Remove old messages for previous requests
-		if (lastCreate != history.end()) {
-			lastCreate++;
-			history.erase(history.begin(), lastCreate);
-		}
-
-		history.insert(history.begin(), systemMsg);
-
-		json request = {
-			{"model", "local-model"},
-			{"messages", history},
-			{"temperature", 0.15}
-		};
-
-		auto gpt = cli.Post("/v1/chat/completions", request.dump(), "application/json");
-		json response;
-
-		if (!gpt || gpt->status != 200) {
-			response["type"] = "error";
-			response["content"] = "";
-		}
-		else {
-			std::string ans = json::parse(gpt->body)["choices"][0]["message"]["content"];
-			response["type"] = "message";
-			response["content"] = ans;
-		}
-
-		res.set_content(response.dump(), "application/json");
-	});
+	svr.Get("/", mainPageCallback);
+	svr.Post("/api/msg", assistantMsgCallback);
 
 	std::cout << "[ OK ]" << std::endl;
 	svr.listen("0.0.0.0", 8080);
+	
 	return 0;
 }
