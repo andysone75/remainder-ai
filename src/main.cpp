@@ -7,8 +7,8 @@
 
 using json = nlohmann::json;
 
-//LlmClient llm("http://llama-cpp-server:1234");
-LlmClient llm("http://localhost:1234");
+LlmClient llm("http://llama-cpp-server:1234");
+//LlmClient llm("http://localhost:1234");
 ChatService chat(llm, "systemPrompt.txt");
 
 void mainPageCallback(const httplib::Request&, httplib::Response& res) {

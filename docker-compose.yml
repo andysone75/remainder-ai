@@ -20,7 +20,7 @@ services:
       - ./models:/models
     command: [
       "--server",
-      "--model", "/models/saiga_nemo_12b.Q4_K_M.gguf", # path to your model here
+      "--model", "/models/saiga_nemo_12b.Q4_K_S.gguf", # path to your model here
       "--ctx-size", "2048",
       "--host", "0.0.0.0",
       "--port", "1234"
